@@ -5,7 +5,6 @@ class Settings(BaseSettings):
 
     BOT_TOKEN: str
     API_KEY: str
-    CLIENT_ID: str
     SCOPE: str
     MODEL: str
 

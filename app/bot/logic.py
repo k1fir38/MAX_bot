@@ -6,6 +6,12 @@ from app.dao.teacher import TeacherDAO
 # Хранилище состояний: {user_id: "название_состояния"}
 USER_STATES = {}
 
+# waiting_discipline_name  <- если создаем новую дисциплину
+# waiting_task_group       <- ввод группы (ИКВТ-22)
+# waiting_task_title       <- ввод названия (Билет №1)
+# waiting_task_questions   <- ввод текста вопросов
+
+
 # Временное хранилище данных регистрации: {user_id: {"name": "...", "role": "..."}}
 TEMP_DATA = {}
 

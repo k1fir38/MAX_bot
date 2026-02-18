@@ -56,6 +56,8 @@ class GigaChatService:
         self.histories = {}
         # Хранилище выбранных ролей
         self.user_roles = {}
+        self.current_ai_roles = {} 
+
 
     def _clean_markdown(self, text):
         """Очистка текста от разметки, которую плохо переваривает мессенджер"""
@@ -73,6 +75,23 @@ class GigaChatService:
             self.clear_history(user_id)
             return True
         return False
+    
+    def set_ai_role(self, user_id: int, role_key: str):
+        """Устанавливает роль для текущей AI сессии и сбрасывает историю."""
+        if role_key in ROLES:
+            self.current_ai_roles[user_id] = role_key
+            # Сбрасываем историю, чтобы начать новый контекст с новым системным промптом
+            self.clear_history(user_id) 
+            return True
+        return False
+
+    def _get_system_prompt(self, user_id):
+        """Формирует системное сообщение на основе выбранной роли AI СЕССИИ"""
+        # ИСПОЛЬЗУЕМ НОВУЮ РОЛЬ СЕССИИ, если она есть, иначе default
+        role_key = self.current_ai_roles.get(user_id, self.user_roles.get(user_id, 'default'))
+        role_text = ROLES[role_key]
+        full_instruction = role_text + BASE_FORMATTING
+        return Messages(role=MessagesRole.SYSTEM, content=full_instruction)
 
     def clear_history(self, user_id: int):
         """Полная очистка памяти диалога"""

@@ -57,3 +57,19 @@ def kb_student_choose_discipline(disciplines):
     for disc in disciplines:
         buttons.append([CallbackButton(text=disc.name, payload=f"st_disc_select:{disc.id}")])
     return ButtonsPayload(buttons=buttons).pack()
+
+def kb_get_ai_role():
+    buttons = [
+        [
+            CallbackButton(text="💻 Программист", payload="ai_role:coder"),
+            CallbackButton(text="🎓 Учитель", payload="ai_role:teacher")
+        ],
+        [
+            CallbackButton(text="🇬🇧 English", payload="ai_role:english"),
+            CallbackButton(text="🍕 Друг", payload="ai_role:friend")
+        ],
+        [
+            CallbackButton(text="♻️ Обычный помощник", payload="ai_role:default")
+        ]
+    ]
+    return ButtonsPayload(buttons=buttons).pack()

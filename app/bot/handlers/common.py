@@ -29,8 +29,29 @@ async def cmd_start(event: MessageCreated):
             "Добро пожаловать в GigaBot! 🤖\nДля начала выберите, кто вы:", 
                                    attachments=[kb.kb_auth_role()])
 
-async def cmd_reset(event: MessageCreated):
-    user_id = event.message.sender.user_id
+async def cmd_reset(event_or_msg, user_id=None):
+    """
+    Универсальная функция запуска сброса. 
+    1. Если вызвана как команда: аргумент один (event)
+    2. Если вызвана из кнопки: передаем (message, user_id)
+    """
+    if user_id is None:
+        # Вызов как команды /reset
+        current_user_id = event_or_msg.message.sender.user_id
+        target_message = event_or_msg.message
+    else:
+        # Вызов из кнопки подтверждения
+        current_user_id = user_id
+        target_message = event_or_msg
+
+    await target_message.answer(
+        "⚠️ **Внимание!**\nСмена роли приведет к полному удалению вашего текущего профиля и всех результатов тестов.\n\nВы уверены?",
+        attachments=[kb.kb_confirm_reset()],
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+async def execute_reset(user_id: int, message_to_answer):
+    """Реальное удаление (выполняется только после нажатия кнопки 'Да')"""
     role, user = await get_user_role_and_data(user_id)
     
     if role == "student":
@@ -40,7 +61,7 @@ async def cmd_reset(event: MessageCreated):
         await AssignmentDAO.delete(author_id=user.id)
         await TeacherDAO.delete(max_id=user_id)
         
-    await event.message.answer("♻️ Аккаунт сброшен. Используйте /start для новой регистрации.")
+    await message_to_answer.answer("♻️ Данные успешно удалены. Используйте /start для новой регистрации.")
 
 async def handle_ai_chat(event: MessageCreated):
     user_id = event.message.sender.user_id

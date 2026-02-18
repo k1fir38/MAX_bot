@@ -20,9 +20,21 @@ def register_handlers(dp: Dispatcher, bot: Bot):
         payload = event.callback.payload
         user_id = event.callback.user.user_id
         
-        # Общие / Смена аккаунта
+        # --- ЛОГИКА СБРОСА ---
         if payload == "menu:reset_account":
-            await common.cmd_reset(event.message) # Передаем message из callback
+            # Просто спрашиваем подтверждение
+            await common.cmd_reset(event.message, user_id)
+
+        elif payload == "reset:confirm":
+            # Пользователь подтвердил — удаляем
+            await common.execute_reset(user_id, event.message)
+            # Удаляем сообщение с кнопками подтверждения, чтобы нельзя было нажать дважды
+            await event.message.delete() 
+
+        elif payload == "reset:cancel":
+            # Пользователь передумал
+            await event.message.delete() # Удаляем вопрос
+            await event.message.answer("Действие отменено. Вы остались в своей роли.")
         
         # AI-ассистент
         elif payload == "menu:chat":

@@ -73,3 +73,10 @@ def kb_get_ai_role():
         ]
     ]
     return ButtonsPayload(buttons=buttons).pack()
+
+def kb_confirm_reset():
+    buttons = [
+        [CallbackButton(text="✅ Да, сбросить всё", payload="reset:confirm")],
+        [CallbackButton(text="❌ Отмена", payload="reset:cancel")]
+    ]
+    return ButtonsPayload(buttons=buttons).pack()

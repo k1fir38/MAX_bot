@@ -31,3 +31,29 @@ def kb_teacher_menu():
         [CallbackButton(text="🗑️ Удалить пользователя", payload="menu:reset_account")]
     ]
     return ButtonsPayload(buttons=buttons).pack()
+
+def kb_choose_discipline(disciplines):
+    """Меню дисциплин преподавателя"""
+    buttons = []
+    # Добавляем существующие дисциплины
+    for disc in disciplines:
+        buttons.append([CallbackButton(text=disc.name, payload=f"disc_select:{disc.id}")])
+    
+    # Кнопка для создания новой
+    buttons.append([CallbackButton(text="➕ Создать новую дисциплину", payload="disc_create_new")])
+    return ButtonsPayload(buttons=buttons).pack()
+
+def kb_test_options(options):
+    """Меню выбора ответа"""
+    buttons = []
+    for opt in options:
+        # Ограничим длину текста на кнопке, если нужно
+        buttons.append([CallbackButton(text=str(opt), payload=f"answer:{opt}")])
+    return ButtonsPayload(buttons=buttons).pack()
+
+def kb_student_choose_discipline(disciplines):
+    """Меню дисциплин студента"""
+    buttons = []
+    for disc in disciplines:
+        buttons.append([CallbackButton(text=disc.name, payload=f"st_disc_select:{disc.id}")])
+    return ButtonsPayload(buttons=buttons).pack()

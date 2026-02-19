@@ -47,12 +47,26 @@ def register_handlers(dp: Dispatcher, bot: Bot):
         elif payload.startswith("reg:"):
             await auth.handle_callback(event, payload, bot)
         
-        # Учитель
-        elif payload.startswith(("menu:create", "disc_", "menu:check")):
+        # Преподаватель
+        elif payload.startswith((
+            "menu:create", 
+            "disc_", 
+            "menu:check", 
+            "menu:manage_assignments", 
+            "task_manage:",            
+            "task_del:",       
+            "task_del_yes:", 
+            "task_view",   
+            "menu:teacher_main",     
+        )):
             await teacher.handle_callback(event, payload, bot)
             
         # Студент
-        elif payload.startswith(("menu:get", "st_disc", "answer:", "menu:grades")):
+        elif payload.startswith((
+            "menu:get",
+            "st_disc", 
+            "answer:", 
+            "menu:grades")):
             await student.handle_callback(event, payload, bot)
 
 

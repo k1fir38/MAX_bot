@@ -12,27 +12,44 @@ from app.dao.result import ResultDAO
 async def handle_callback(event: MessageCallback, payload: str, bot):
     user_id = event.callback.user.user_id
     chat_id = event.message.recipient.chat_id
+    role, user = await get_user_role_and_data(user_id)
+    if user is None:
+        await event.message.answer(
+            "⚠️ **Ошибка:** Ваш профиль не найден в базе данных.\n"
+            "Возможно, вы сбросили аккаунт. Пожалуйста, введите /start для регистрации.",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
 
     if payload == "menu:get_task":
         disciplines = await DisciplineDAO.find_all()
         if not disciplines:
             await bot.send_message(chat_id=chat_id, text="📚 Предметов пока не создано.")
             return
-        await bot.send_message(chat_id=chat_id, text="Выберите предмет:", attachments=[kb.kb_student_choose_discipline(disciplines)])
+        await bot.send_message(chat_id=chat_id, 
+                               text="Выберите предмет:", 
+                               attachments=[kb.kb_student_choose_discipline(disciplines)])
 
     elif payload.startswith("st_disc_select:"):
         disc_id = int(payload.split(":")[1])
-        role, user = await get_user_role_and_data(user_id)
-        task = await AssignmentDAO.get_for_student(student_id=user.id, group_name=user.group_name, discipline_id=disc_id)
-        
+        task = await AssignmentDAO.get_for_student(student_id=user.id, 
+                                                   group_name=user.group_name, 
+                                                   discipline_id=disc_id)
+
         if not task:
             await bot.send_message(chat_id=chat_id, text="✅ Заданий нет!")
             return
 
         questions = json.loads(task.questions)
-        TEMP_DATA[user_id] = {"task_id": task.id, "questions": questions, "current_idx": 0, "correct_count": 0}
+        TEMP_DATA[user_id] = {"task_id": task.id, 
+                              "questions": questions, 
+                              "current_idx": 0, 
+                              "correct_count": 0}
         q = questions[0]
-        await bot.send_message(chat_id=chat_id, text=f"📝 **{task.title}**\n\nВопрос 1: {q['q']}", attachments=[kb.kb_test_options(q['options'])], parse_mode=ParseMode.MARKDOWN)
+        await bot.send_message(chat_id=chat_id, 
+                               text=f"📝 **{task.title}**\n\nВопрос 1: {q['q']}", 
+                               attachments=[kb.kb_test_options(q['options'])], 
+                               parse_mode=ParseMode.MARKDOWN)
 
     elif payload.startswith("answer:"):
         data = TEMP_DATA.get(user_id)
@@ -45,14 +62,21 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         
         if data["current_idx"] < len(data["questions"]):
             nxt = data["questions"][data["current_idx"]]
-            await bot.send_message(chat_id=chat_id, text=f"Вопрос {data['current_idx']+1}: {nxt['q']}", attachments=[kb.kb_test_options(nxt['options'])])
+            await bot.send_message(chat_id=chat_id, 
+                                   text=f"Вопрос {data['current_idx']+1}: {nxt['q']}", 
+                                   attachments=[kb.kb_test_options(nxt['options'])])
         else:
             total = len(data["questions"])
             score = data["correct_count"]
             percent = round((score/total)*100) if total > 0 else 0
             role, user = await get_user_role_and_data(user_id)
-            await ResultDAO.add(student_id=user.id, assignment_id=data["task_id"], grade=percent, feedback=f"Верно {score}/{total}")
-            await bot.send_message(chat_id=chat_id, text=f"🏁 Результат: {percent}%", attachments=[kb.kb_student_menu()])
+            await ResultDAO.add(student_id=user.id, 
+                                assignment_id=data["task_id"], 
+                                grade=percent, 
+                                feedback=f"Верно {score}/{total}")
+            await bot.send_message(chat_id=chat_id, 
+                                   text=f"🏁 Результат: {percent}%", 
+                                   attachments=[kb.kb_student_menu()])
             del TEMP_DATA[user_id]
 
     elif payload == "menu:grades":

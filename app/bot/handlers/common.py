@@ -67,6 +67,32 @@ async def handle_ai_chat(event: MessageCreated):
     user_id = event.message.sender.user_id
     user_text = event.message.body.text
     
+    # 1. Получаем текущую роль AI, которую использует ai_service
+    # Нам нужно получить доступ к ai_service.current_ai_roles 
+    # ВНИМАНИЕ: ai_service импортирован в main.py, но не в common.py. 
+    # Давай импортируем его здесь, если его нет.
+    
+    # Проверяем, какая роль установлена в сервисе для этого пользователя
+    current_ai_role_key = ai_service.current_ai_roles.get(user_id, ai_service.user_roles.get(user_id, 'default'))
+    
+    role_names = {
+        "coder": "Senior Developer 💻",
+        "teacher": "Учитель 🎓",
+        "english": "English Tutor 🇬🇧",
+        "friend": "Друг 🍕",
+        "default": "Обычный помощник ♻️"
+    }
+    current_name = role_names.get(current_ai_role_key, "Обычный")
+    
+    # 2. Отправляем сообщение об ожидании ИИ И с указанием роли
+    await event.message.answer(f"🤖 **AI-Ассистент активен.**\nТекущий режим: `{current_name}`", parse_mode=ParseMode.MARKDOWN)
+    
     await event.message.answer("⏳ Думаю...")
-    response_text = await asyncio.to_thread(ai_service.generate_response, user_id, user_text)
+
+    response_text = await asyncio.to_thread(
+        ai_service.generate_response, 
+        user_id, 
+        user_text
+    )
+    
     await event.message.answer(text=response_text, parse_mode=ParseMode.MARKDOWN)

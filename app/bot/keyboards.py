@@ -26,9 +26,29 @@ def kb_teacher_menu():
     """Меню преподавателя"""
     buttons = [
         [CallbackButton(text="➕ Создать задание", payload="menu:create_task")],
+        [CallbackButton(text="📋 Мои задания", payload="menu:manage_assignments")],
         [CallbackButton(text="👀 Проверить работы", payload="menu:check")],
         [CallbackButton(text="💬 Чат с AI", payload="menu:chat")],
         [CallbackButton(text="🗑️ Удалить пользователя", payload="menu:reset_account")]
+    ]
+    return ButtonsPayload(buttons=buttons).pack()
+
+def kb_teacher_assignments(assignments):
+    """Список заданий учителя"""
+    buttons = []
+    for task in assignments:
+        # Текст: Название (Группа). Payload: id задания
+        buttons.append([CallbackButton(
+            text=f"{task.title} ({task.target_group})", 
+            payload=f"task_manage:{task.id}"
+        )])
+    return ButtonsPayload(buttons=buttons).pack()
+
+def kb_confirm_delete_task(task_id):
+    """Подтверждение удаления конкретного задания"""
+    buttons = [
+        [CallbackButton(text="🔥 Да, удалить навсегда", payload=f"task_del_yes:{task_id}")],
+        [CallbackButton(text="❌ Отмена", payload="menu:manage_assignments")]
     ]
     return ButtonsPayload(buttons=buttons).pack()
 
@@ -78,5 +98,17 @@ def kb_confirm_reset():
     buttons = [
         [CallbackButton(text="✅ Да, сбросить всё", payload="reset:confirm")],
         [CallbackButton(text="❌ Отмена", payload="reset:cancel")]
+    ]
+    return ButtonsPayload(buttons=buttons).pack()
+
+def kb_manage_single_assignment(task_id, title, group):
+    buttons = [
+        [
+            CallbackButton(text="📝 Просмотр JSON", payload=f"task_view:{task_id}"),
+            CallbackButton(text="🗑 Удалить", payload=f"task_del:{task_id}")
+        ],
+        [
+            CallbackButton(text="⬅️ Назад к списку", payload="menu:manage_assignments")
+        ]
     ]
     return ButtonsPayload(buttons=buttons).pack()

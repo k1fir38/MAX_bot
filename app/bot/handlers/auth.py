@@ -17,6 +17,24 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         USER_STATES[user_id] = "waiting_teacher_name"
         await bot.send_message(chat_id=chat_id, text="Введите ваше ФИО (например, Иванов И.И.):")
 
+    elif payload == "reg:back": # Предположим, пейлоад кнопки "Назад" в регистрации будет "reg:back"
+        state = USER_STATES.get(user_id)
+        
+        if state == "waiting_student_fio":
+            # Назад к выбору роли
+            del USER_STATES[user_id]
+            await event.message.answer("Выберите роль:", attachments=[kb.kb_auth_role()])
+            
+        elif state == "waiting_student_group":
+            # Назад к вводу ФИО
+            USER_STATES[user_id] = "waiting_student_fio"
+            await event.message.answer("⬅️ Вернулись. Введите ваше ФИО:")
+            
+        elif state == "waiting_teacher_name":
+            # Назад к выбору роли
+            del USER_STATES[user_id]
+            await event.message.answer("Выберите роль:", attachments=[kb.kb_auth_role()])
+
 async def handle_text(event: MessageCreated, state: str):
     user_id = event.message.sender.user_id
     text = event.message.body.text
@@ -34,10 +52,12 @@ async def handle_text(event: MessageCreated, state: str):
         
         del USER_STATES[user_id]
         if user_id in TEMP_DATA: del TEMP_DATA[user_id]
-        await event.message.answer(f"✅ Регистрация завершена!\n👤 Имя: {fio}\n👥 Группа: {text.upper()}", attachments=[kb.kb_student_menu()])
+        await event.message.answer(f"✅ Регистрация завершена!\n👤 Имя: {fio}\n👥 Группа: {text.upper()}",
+                                   attachments=[kb.kb_student_menu()])
 
     # --- ПРЕПОДАВАТЕЛЬ ---
     elif state == "waiting_teacher_name":
         await TeacherDAO.add(max_id=user_id, full_name=text)
         del USER_STATES[user_id]
-        await event.message.answer(f"✅ Вы зарегистрированы как преподаватель: {text}", attachments=[kb.kb_teacher_menu()])
+        await event.message.answer(f"✅ Вы зарегистрированы как преподаватель: {text}",
+                                   attachments=[kb.kb_teacher_menu()])

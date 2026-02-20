@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from maxapi.types import MessageCallback
@@ -8,6 +9,7 @@ from app.bot.logic import TEMP_DATA, get_user_role_and_data
 from app.dao.discipline import DisciplineDAO
 from app.dao.assignment import AssignmentDAO
 from app.dao.result import ResultDAO
+from app.gigachat import ai_service
 
 async def handle_callback(event: MessageCallback, payload: str, bot):
     user_id = event.callback.user.user_id
@@ -41,10 +43,13 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
             return
 
         questions = json.loads(task.questions)
-        TEMP_DATA[user_id] = {"task_id": task.id, 
-                              "questions": questions, 
-                              "current_idx": 0, 
-                              "correct_count": 0}
+        TEMP_DATA[user_id] = {
+            "task_id": task.id,
+            "questions": questions,
+            "current_idx": 0,
+            "correct_count": 0,
+            "history": [] # <--- Сюда будем складывать ответы
+        }
         q = questions[0]
         await bot.send_message(chat_id=chat_id, 
                                text=f"📝 **{task.title}**\n\nВопрос 1: {q['q']}", 
@@ -57,7 +62,19 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         user_answer = payload.replace("answer:", "")
         q = data["questions"][data["current_idx"]]
         
-        if str(user_answer) == str(q["answer"]): data["correct_count"] += 1
+        is_correct = str(user_answer) == str(q["answer"])
+        
+        if is_correct: 
+            data["correct_count"] += 1
+            
+        # ИЗМЕНЕНИЕ 2: Сохраняем ход решения
+        data["history"].append({
+            "question": q["q"],
+            "student_answer": user_answer,
+            "correct_answer": q["answer"],
+            "is_correct": is_correct
+        })
+
         data["current_idx"] += 1
         
         if data["current_idx"] < len(data["questions"]):
@@ -66,17 +83,41 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
                                    text=f"Вопрос {data['current_idx']+1}: {nxt['q']}", 
                                    attachments=[kb.kb_test_options(nxt['options'])])
         else:
+            # --- ФИНАЛ ТЕСТА С AI ---
             total = len(data["questions"])
             score = data["correct_count"]
             percent = round((score/total)*100) if total > 0 else 0
+            
+            # Сообщаем, что идет проверка
+            wait_msg = await event.message.answer("🏁 Тест завершен! Нейросеть проверяет ваши ответы и пишет рецензию... ⏳")
+            
+            # Вызываем GigaChat (в отдельном потоке, чтобы не тормозить)
+            ai_feedback = await asyncio.to_thread(
+                ai_service.analyze_test_results, 
+                data["history"]
+            )
+            
+            # Удаляем сообщение "проверяет..."
+            try: await bot.delete_message(chat_id=chat_id, message_id=wait_msg.message.id)
+            except: pass
+
             role, user = await get_user_role_and_data(user_id)
-            await ResultDAO.add(student_id=user.id, 
-                                assignment_id=data["task_id"], 
-                                grade=percent, 
-                                feedback=f"Верно {score}/{total}")
-            await bot.send_message(chat_id=chat_id, 
-                                   text=f"🏁 Результат: {percent}%", 
-                                   attachments=[kb.kb_student_menu()])
+            if user:
+                await ResultDAO.add(
+                    student_id=user.id, 
+                    assignment_id=data["task_id"], 
+                    grade=percent, 
+                    # Сохраняем рецензию от ИИ в базу!
+                    feedback=ai_feedback 
+                )
+            
+            # Выводим результат и рецензию
+            await event.message.answer(
+                f"📊 **Результат:** `{percent}%` ({score}/{total})\n\n"
+                f"🧑‍🏫 **Рецензия преподавателя (AI):**\n{ai_feedback}", 
+                attachments=[kb.kb_student_menu()],
+                parse_mode=ParseMode.MARKDOWN
+            )
             del TEMP_DATA[user_id]
 
     elif payload == "menu:grades":

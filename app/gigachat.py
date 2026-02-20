@@ -140,6 +140,51 @@ class GigaChatService:
         except Exception as e:
             # Если токен протух или ошибка сети
             return f"⚠️ Ошибка GigaChat: {e}"
+    
+    def analyze_test_results(self, test_data: list) -> str:
+        """
+        Анализирует результаты теста.
+        test_data ожидает формат: 
+        [{'question': '...', 'student_answer': '...', 'correct_answer': '...', 'is_correct': True/False}, ...]
+        """
+        try:
+            # Формируем текст для нейросети
+            report_lines = ["Проанализируй результаты теста студента и дай краткую рецензию."]
+            
+            for i, item in enumerate(test_data, 1):
+                status = "✅ Верно" if item['is_correct'] else "❌ Ошибка"
+                report_lines.append(
+                    f"{i}. Вопрос: {item['question']}\n"
+                    f"   Ответ студента: {item['student_answer']} ({status})\n"
+                    f"   Правильный ответ: {item['correct_answer']}"
+                )
+            
+            prompt_text = "\n".join(report_lines)
+            
+            # Добавляем инструкцию для роли
+            system_instruction = (
+                "Ты — опытный преподаватель. Твоя задача — написать короткую, но полезную рецензию "
+                "на ответы студента. Похвали за правильные ответы. "
+                "Для неправильных ответов кратко объясни, почему они неверны, или дай совет, что повторить. "
+                "Обращайся к студенту на 'ты'. Не используй Markdown заголовки."
+            )
+
+            # Формируем запрос (без истории диалога, это разовый запрос)
+            payload = Chat(
+                messages=[
+                    Messages(role=MessagesRole.SYSTEM, content=system_instruction),
+                    Messages(role=MessagesRole.USER, content=prompt_text)
+                ],
+                temperature=0.7,
+                max_tokens=800
+            )
+            
+            response = self.giga.chat(payload)
+            return response.choices[0].message.content
+
+        except Exception as e:
+            print(f"Ошибка AI анализа: {e}")
+            return "Не удалось сгенерировать рецензию от ИИ, но результат сохранен."
 
 # Создаем экземпляр сервиса
 ai_service = GigaChatService()

@@ -104,7 +104,7 @@ def kb_confirm_reset():
 def kb_manage_single_assignment(task_id, title, group):
     buttons = [
         [
-            CallbackButton(text="📝 Просмотр JSON", payload=f"task_view:{task_id}"),
+            CallbackButton(text="📝 Просмотр теста", payload=f"task_view:{task_id}"),
             CallbackButton(text="🗑 Удалить", payload=f"task_del:{task_id}")
         ],
         [

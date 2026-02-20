@@ -80,17 +80,48 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
 
     elif payload.startswith("task_view:"):
         task_id = int(payload.split(":")[1])
+        # Находим задание в базе
         task = await AssignmentDAO.find_one_or_none(id=task_id, author_id=user.id)
         
         if task and task.questions:
-            # Отправляем JSON как отформатированный код (Markdown)
-            await event.message.answer(
-                f"**JSON для задания '{task.title}':**\n"
-                f"```json\n{task.questions}\n```",
-                parse_mode=ParseMode.MARKDOWN
-            )
+            try:
+                # 1. Распаковываем строку JSON в список Python
+                questions_data = json.loads(task.questions)
+                
+                # 2. Формируем красивый заголовок
+                msg_lines = [
+                    f"📖 **Просмотр задания:** {task.title}",
+                    f"👥 **Группа:** {task.target_group}",
+                    "" # Пустая строка
+                ]
+
+                # 3. Проходим циклом по вопросам
+                for item in questions_data:
+                    msg_lines.append(f"❓ **Вопрос №{item['n']}:** {item['q']}")
+                    
+                    for opt in item['options']:
+                        # Если этот вариант совпадает с правильным ответом
+                        if str(opt).strip() == str(item['answer']).strip():
+                            # Выводим большими буквами и с галочкой
+                            msg_lines.append(f"   ✅ {opt}")
+                        else:
+                            # Обычный вариант
+                            msg_lines.append(f"   ▫️ {opt}")
+                    
+                    msg_lines.append("") # Разделитель между вопросами
+
+                # 4. Объединяем всё в одно сообщение
+                full_message = "\n".join(msg_lines)
+                
+                await event.message.answer(
+                    full_message, 
+                    parse_mode=ParseMode.MARKDOWN
+                )
+
+            except Exception as e:
+                await event.message.answer(f"❌ Не удалось прочитать структуру JSON: {e}")
         else:
-            await event.message.answer("Не удалось найти JSON для этого задания.")
+            await event.message.answer("Задание не найдено.")
     
 
     # 4. Возврат в главное меню

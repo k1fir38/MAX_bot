@@ -162,9 +162,23 @@ async def handle_text(event: MessageCreated, state: str):
     text = event.message.body.text
 
     if state == "waiting_discipline_name":
+        # 1. Сохраняем новую дисциплину в базу
         await DisciplineDAO.add(name=text)
+        
+        # 2. Очищаем состояние ожидания текста
         del USER_STATES[user_id]
-        await event.message.answer(f"✅ Дисциплина '{text}' создана! Нажмите 'Создать задание' снова.")
+        
+        # 3. Получаем ОБНОВЛЕННЫЙ список всех дисциплин
+        disciplines = await DisciplineDAO.find_all()
+        
+        # 4. Сразу выводим сообщение со списком кнопок
+        await event.message.answer(
+            f"✅ Дисциплина '{text}' успешно создана!\n"
+            f"Теперь выберите её в списке ниже, чтобы продолжить создание задания:",
+            attachments=[kb.kb_choose_discipline(disciplines)],
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
 
     elif state == "waiting_task_group":
         TEMP_DATA[user_id]["target_group"] = text.upper()

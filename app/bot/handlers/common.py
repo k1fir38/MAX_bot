@@ -9,7 +9,7 @@ from app.dao.student import StudentDAO
 from app.dao.teacher import TeacherDAO
 from app.dao.result import ResultDAO
 from app.dao.assignment import AssignmentDAO
-from app.gigachat import ai_service
+from app.services.gigachat import ai_service
 
 async def cmd_start(event: MessageCreated):
     user_id = event.message.sender.user_id

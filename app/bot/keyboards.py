@@ -112,3 +112,13 @@ def kb_manage_single_assignment(task_id, title, group):
         ]
     ]
     return ButtonsPayload(buttons=buttons).pack()
+
+def kb_student_assignments_list(tasks):
+    """Клавиатура со списком доступных тестов для студента"""
+    buttons = []
+    for task in tasks:
+        # Текст: Название задания. Payload: st_task_select:ID
+        buttons.append([CallbackButton(text=f"📝 {task.title}", payload=f"st_task_select:{task.id}")])
+    
+    buttons.append([CallbackButton(text="⬅️ Назад к предметам", payload="menu:get_task")])
+    return ButtonsPayload(buttons=buttons).pack()

@@ -25,3 +25,21 @@ class AssignmentDAO(BaseDAO):
             
             result = await session.execute(query)
             return result.scalar_one_or_none()
+
+    @classmethod
+    async def get_all_available_for_student(cls, student_id: int, group_name: str, discipline_id: int):
+        async with async_session_maker() as session:
+            # Подзапрос: ID заданий, которые студент уже сдавал
+            subquery = select(UserResult.assignment_id).where(UserResult.student_id == student_id)
+            
+            # Ищем ВСЕ задания для группы и предмета, которых нет в подзапросе
+            query = select(cls.model).where(
+                and_(
+                    cls.model.target_group == group_name,
+                    cls.model.discipline_id == discipline_id,
+                    not_(cls.model.id.in_(subquery))
+                )
+            )
+            
+            result = await session.execute(query)
+            return result.scalars().all()

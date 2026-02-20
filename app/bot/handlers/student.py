@@ -9,7 +9,7 @@ from app.bot.logic import TEMP_DATA, get_user_role_and_data
 from app.dao.discipline import DisciplineDAO
 from app.dao.assignment import AssignmentDAO
 from app.dao.result import ResultDAO
-from app.gigachat import ai_service
+from app.services.gigachat import ai_service
 
 async def handle_callback(event: MessageCallback, payload: str, bot):
     user_id = event.callback.user.user_id
@@ -34,27 +34,51 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
 
     elif payload.startswith("st_disc_select:"):
         disc_id = int(payload.split(":")[1])
-        task = await AssignmentDAO.get_for_student(student_id=user.id, 
-                                                   group_name=user.group_name, 
-                                                   discipline_id=disc_id)
+        role, user = await get_user_role_and_data(user_id)
+        tasks = await AssignmentDAO.get_all_available_for_student(
+            student_id=user.id, 
+            group_name=user.group_name, 
+            discipline_id=disc_id
+        )
 
-        if not task:
-            await bot.send_message(chat_id=chat_id, text="✅ Заданий нет!")
+        if not tasks:
+            await event.message.answer("✅ По этому предмету заданий пока нет (или вы всё решили).")
             return
 
+        await event.message.answer(
+            "📋 **Выберите задание:**",
+            attachments=[kb.kb_student_assignments_list(tasks)],
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
+    
+    elif payload.startswith("st_task_select:"):
+        task_id = int(payload.split(":")[1])
+        
+        # Загружаем конкретное задание из базы
+        task = await AssignmentDAO.find_one_or_none(id=task_id)
+        
+        if not task:
+            await event.message.answer("❌ Ошибка: Задание не найдено.")
+            return
+
+        # --- ЗАПУСК ТЕСТА (Твой старый код инициализации) ---
         questions = json.loads(task.questions)
         TEMP_DATA[user_id] = {
-            "task_id": task.id,
-            "questions": questions,
-            "current_idx": 0,
+            "task_id": task.id, 
+            "questions": questions, 
+            "current_idx": 0, 
             "correct_count": 0,
-            "history": [] # <--- Сюда будем складывать ответы
+            "history": [] 
         }
+        
         q = questions[0]
-        await bot.send_message(chat_id=chat_id, 
-                               text=f"📝 **{task.title}**\n\nВопрос 1: {q['q']}", 
-                               attachments=[kb.kb_test_options(q['options'])], 
-                               parse_mode=ParseMode.MARKDOWN)
+        await event.message.answer(
+            f"🚀 **Начинаем: {task.title}**\n\nВопрос 1: {q['q']}", 
+            attachments=[kb.kb_test_options(q['options'])], 
+            parse_mode=ParseMode.MARKDOWN
+        )
+        return
 
     elif payload.startswith("answer:"):
         data = TEMP_DATA.get(user_id)

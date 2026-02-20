@@ -3,7 +3,7 @@ from maxapi.types import MessageCreated, MessageCallback
 from maxapi.enums.parse_mode import ParseMode
 
 from app.bot import keyboards as kb
-from app.gigachat import ai_service
+from app.services.gigachat import ai_service
 
 async def handle_ai_menu(event: MessageCallback):
     """Показывает меню выбора ролей AI"""

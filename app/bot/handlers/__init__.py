@@ -5,7 +5,7 @@ from maxapi.enums.parse_mode import ParseMode
 # Импортируем наши новые файлы
 from . import common, auth, teacher, student, ai
 from app.bot.logic import USER_STATES
-from app.gigachat import ai_service
+from app.services.gigachat import ai_service
 from app.bot import keyboards as kb
 
 def register_handlers(dp: Dispatcher, bot: Bot):
@@ -65,6 +65,7 @@ def register_handlers(dp: Dispatcher, bot: Bot):
         elif payload.startswith((
             "menu:get",
             "st_disc", 
+            "st_task_select",
             "answer:", 
             "menu:grades")):
             await student.handle_callback(event, payload, bot)

@@ -8,7 +8,7 @@ from app.bot import keyboards as kb
 from app.bot.logic import TEMP_DATA, get_user_role_and_data
 from app.dao.discipline import DisciplineDAO
 from app.dao.assignment import AssignmentDAO
-from app.dao.result import ResultDAO
+from app.dao.result import UserResultDAO
 from app.services.gigachat import ai_service
 
 async def handle_callback(event: MessageCallback, payload: str, bot):
@@ -35,8 +35,9 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
     elif payload.startswith("st_disc_select:"):
         disc_id = int(payload.split(":")[1])
         role, user = await get_user_role_and_data(user_id)
+
         tasks = await AssignmentDAO.get_all_available_for_student(
-            student_id=user.id, 
+            max_id=user_id, 
             group_name=user.group_name, 
             discipline_id=disc_id
         )
@@ -127,8 +128,11 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
 
             role, user = await get_user_role_and_data(user_id)
             if user:
-                await ResultDAO.add(
+                await UserResultDAO.add(
                     student_id=user.id, 
+                    student_max_id=user_id,
+                    student_name=user.full_name, 
+                    student_group=user.group_name,
                     assignment_id=data["task_id"], 
                     grade=percent, 
                     # Сохраняем рецензию от ИИ в базу!
@@ -146,7 +150,7 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
 
     elif payload == "menu:grades":
         role, user = await get_user_role_and_data(user_id)
-        results = await ResultDAO.get_results_with_task_name(user.id)
+        results = await UserResultDAO.get_results_with_task_name(user_id)
         if not results:
             await bot.send_message(chat_id=chat_id, text="📭 Оценок нет.")
             return

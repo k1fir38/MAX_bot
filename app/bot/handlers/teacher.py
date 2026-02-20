@@ -7,7 +7,7 @@ from app.bot import keyboards as kb
 from app.bot.logic import USER_STATES, TEMP_DATA, get_user_role_and_data
 from app.dao.discipline import DisciplineDAO
 from app.dao.assignment import AssignmentDAO
-from app.dao.result import ResultDAO
+from app.dao.result import UserResultDAO
 
 async def handle_callback(event: MessageCallback, payload: str, bot):
     user_id = event.callback.user.user_id
@@ -24,7 +24,6 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
     elif payload == "menu:manage_assignments":
         tasks = await AssignmentDAO.find_all(author_id=user.id)
         if not tasks:
-            await event.message.answer("📭 У вас пока нет созданных заданий.")
             await handle_manage_assignments(event.message, user_id)
             return
         
@@ -70,7 +69,7 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         # Для простоты используем user.id, который мы должны получить в начале callback_handler
         
         try:
-            await ResultDAO.delete(assignment_id=task_id)
+            await UserResultDAO.delete(assignment_id=task_id)
             await AssignmentDAO.delete(id=task_id)
             
             await event.message.answer(f"✅ Задание: '{task.title}' для группы: '{task.target_group}' успешно удалено.")
@@ -114,14 +113,14 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         await bot.send_message(chat_id=chat_id, text="Для какой группы это задание? (например, ИКВТ-22):")
 
     elif payload == "menu:check":
-        results = await ResultDAO.get_all_results_for_teacher()
+        results = await UserResultDAO.get_results_for_teacher_by_max_id(user_id)
         if not results:
             await bot.send_message(chat_id=chat_id, text="📈 Ведомость пока пуста.")
             return
         
         msg = "📊 **Общая ведомость результатов:**\n\n"
-        for res, student, task_title in results:
-            msg += (f"👤 {student.full_name} ({student.group_name})\n"
+        for res, task_title in results:
+            msg += (f"👤 {res.student_name} ({res.student_group})\n"
                     f"📝 {task_title}: `{res.grade}%`\n"
                     f"📅 {res.submitted_at.strftime('%d.%m %H:%M')}\n-------------------\n")
         await bot.send_message(chat_id=chat_id, text=msg, parse_mode=ParseMode.MARKDOWN)
@@ -160,8 +159,12 @@ async def handle_text(event: MessageCreated, state: str):
         data = TEMP_DATA.get(user_id)
         role, teacher = await get_user_role_and_data(user_id)
         await AssignmentDAO.add(
-            discipline_id=data["discipline_id"], author_id=teacher.id,
-            title=data["title"], questions=text, target_group=data["target_group"]
+            discipline_id=data["discipline_id"],
+            author_id=teacher.id,
+            author_max_id=user_id,
+            title=data["title"],
+            questions=text,
+            target_group=data["target_group"]
         )
         del USER_STATES[user_id]
         del TEMP_DATA[user_id]

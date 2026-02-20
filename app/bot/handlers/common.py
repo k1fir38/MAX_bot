@@ -7,7 +7,7 @@ from app.bot import keyboards as kb
 from app.bot.logic import USER_STATES, get_user_role_and_data
 from app.dao.student import StudentDAO
 from app.dao.teacher import TeacherDAO
-from app.dao.result import ResultDAO
+from app.dao.result import UserResultDAO
 from app.dao.assignment import AssignmentDAO
 from app.services.gigachat import ai_service
 
@@ -55,7 +55,6 @@ async def execute_reset(user_id: int, message_to_answer):
     role, user = await get_user_role_and_data(user_id)
     
     if role == "student":
-        await ResultDAO.delete(student_id=user.id)
         await StudentDAO.delete(max_id=user_id)
     elif role == "teacher":
         await AssignmentDAO.delete(author_id=user.id)

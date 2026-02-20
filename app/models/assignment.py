@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import BigInteger, Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -9,7 +9,8 @@ class Assignment(Base):
     
     # --- ССЫЛКИ НА ДРУГИЕ ТАБЛИЦЫ ---
     discipline_id = Column(Integer, ForeignKey('disciplines.id')) 
-    author_id = Column(Integer, ForeignKey('teachers.id')) 
+    author_id = Column(Integer, ForeignKey('teachers.id'))
+    author_max_id = Column(BigInteger, index=True)
     
     # --- ОПИСАНИЕ ЗАДАНИЯ ---
     title = Column(String)                  

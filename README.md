@@ -41,9 +41,9 @@ app/
 ├── dao/            # Data Access Object (Логика работы с БД)
 ├── models/         # SQLAlchemy модели данных
 ├── migrations/     # Миграции Alembic
+├── services/       # Сервис GigaChat
 ├── config.py       # Настройки (Pydantic-settings)
 ├── database.py     # Инициализация асинхронной сессии БД
-├── service.py      # Сервис GigaChat
 └── main.py         # Точка входа в приложение
 ```
 

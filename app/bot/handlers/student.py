@@ -84,69 +84,82 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
     elif payload.startswith("answer:"):
         data = TEMP_DATA.get(user_id)
         if not data: return
+
+        # 1. САМЫЙ ПРЯМОЙ СПОСОБ УДАЛЕНИЯ ИЗ MAXAPI
+        try:
+            # В maxapi у объекта сообщения в колбэке есть метод delete()
+            await event.message.delete() 
+        except Exception as e:
+            # Если не сработало, пробуем через bot по .id
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=event.message.id)
+            except:
+                print(f"DEBUG: Все способы удаления не сработали: {e}")
+
+        # 2. ЛОГИКА ТЕСТА
         user_answer = payload.replace("answer:", "")
-        q = data["questions"][data["current_idx"]]
+        q_data = data["questions"][data["current_idx"]]
         
-        is_correct = str(user_answer) == str(q["answer"])
-        
+        is_correct = str(user_answer).strip() == str(q_data["answer"]).strip()
         if is_correct: 
             data["correct_count"] += 1
             
-        # ИЗМЕНЕНИЕ 2: Сохраняем ход решения
+        # 3. ЗАПИСЬ ИСТОРИИ (КЛЮЧИ СТРОГО ПОД GIGACHAT.PY)
         data["history"].append({
-            "question": q["q"],
+            "question": q_data["q"],
             "student_answer": user_answer,
-            "correct_answer": q["answer"],
+            "correct_answer": q_data["answer"],
             "is_correct": is_correct
         })
 
         data["current_idx"] += 1
         
         if data["current_idx"] < len(data["questions"]):
+            # Следующий вопрос
             nxt = data["questions"][data["current_idx"]]
-            await bot.send_message(chat_id=chat_id, 
-                                   text=f"Вопрос {data['current_idx']+1}: {nxt['q']}", 
-                                   attachments=[kb.kb_test_options(nxt['options'])])
+            await event.message.answer(
+                f"Вопрос {data['current_idx']+1}: {nxt['q']}", 
+                attachments=[kb.kb_test_options(nxt['options'])]
+            )
         else:
-            # --- ФИНАЛ ТЕСТА С AI ---
+            # --- ФИНАЛ ---
             total = len(data["questions"])
             score = data["correct_count"]
             percent = round((score/total)*100) if total > 0 else 0
             
-            # Сообщаем, что идет проверка
-            wait_msg = await event.message.answer("🏁 Тест завершен! Нейросеть проверяет ваши ответы и пишет рецензию... ⏳")
+            wait_msg = await event.message.answer("🏁 Тест завершен! Нейросеть готовит рецензию... ⏳")
             
-            # Вызываем GigaChat (в отдельном потоке, чтобы не тормозить)
+            # Вызываем твой analyze_test_results (он ждет student_answer и question)
             ai_feedback = await asyncio.to_thread(
                 ai_service.analyze_test_results, 
                 data["history"]
             )
             
-            # Удаляем сообщение "проверяет..."
-            try: await bot.delete_message(chat_id=chat_id, message_id=wait_msg.message.id)
-            except: pass
+            # Удаляем "готовит рецензию..."
+            try:
+                await wait_msg.delete()
+            except:
+                pass
 
-            role, user = await get_user_role_and_data(user_id)
-            if user:
-                await UserResultDAO.add(
-                    student_id=user.id, 
-                    student_max_id=user_id,
-                    student_name=user.full_name, 
-                    student_group=user.group_name,
-                    assignment_id=data["task_id"], 
-                    grade=percent, 
-                    # Сохраняем рецензию от ИИ в базу!
-                    feedback=ai_feedback 
-                )
+            # Сохранение в БД
+            await UserResultDAO.add(
+                student_id=user.id, 
+                student_max_id=user_id,
+                student_name=user.full_name, 
+                student_group=user.group_name,
+                assignment_id=data["task_id"], 
+                grade=percent, 
+                feedback=ai_feedback 
+            )
             
-            # Выводим результат и рецензию
             await event.message.answer(
                 f"📊 **Результат:** `{percent}%` ({score}/{total})\n\n"
-                f"🧑‍🏫 **Рецензия преподавателя (AI):**\n{ai_feedback}", 
+                f"🧑‍🏫 **Рецензия от AI:**\n{ai_feedback}", 
                 attachments=[kb.kb_student_menu()],
                 parse_mode=ParseMode.MARKDOWN
             )
             del TEMP_DATA[user_id]
+        return
 
     elif payload == "menu:grades":
         role, user = await get_user_role_and_data(user_id)

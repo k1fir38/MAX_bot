@@ -25,7 +25,7 @@ async def main():
     register_handlers(dp, bot)
 
     print("🚀 Бот запущен...")
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, skip_updates=True)
 
 if __name__ == '__main__':
     try:

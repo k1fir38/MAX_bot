@@ -1,5 +1,3 @@
-
-
 from app.dao.student import StudentDAO
 from app.dao.teacher import TeacherDAO
 

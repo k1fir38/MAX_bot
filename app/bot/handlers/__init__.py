@@ -80,15 +80,29 @@ def register_handlers(dp: Dispatcher, bot: Bot):
         user_id = event.message.sender.user_id
         state = USER_STATES.get(user_id)
 
-        # Если нет состояния -> Идем в AI чат
-        if not state:
-            await common.handle_ai_chat(event)
+        # Если пользователь РЕШАЕТ ТЕСТ - блокируем любой текст
+        if state == "solving_test":
+            await event.message.answer("⚠️ **Идет тест!**\nПожалуйста, используй кнопки для выбора ответа. Текстовый ввод отключен.")
             return
 
-        # Если состояние авторизации
-        if state.startswith("waiting_student") or state == "waiting_teacher_name":
-            await auth.handle_text(event, state)
-        
-        # Если состояние учителя
-        elif state.startswith("waiting_task") or state == "waiting_discipline_name":
-            await teacher.handle_text(event, state)
+        # Если включен режим АИ - отправляем в GigaChat
+        if state == "ai_chat_active":
+            await ai.process_ai_chat(event, bot)
+            return
+
+        # Обработка регистрации и создания заданий
+        if state:
+            if state.startswith("waiting_student") or state == "waiting_teacher_name":
+                await auth.handle_text(event, state)
+                return
+            elif state.startswith("waiting_task") or state == "waiting_discipline_name":
+                await teacher.handle_text(event, state)
+                return
+
+        # Если вообще нет состояния просим выбрать действие
+        if not state:
+            await event.message.answer(
+                "🤖 Я не знаю, что делать с этим текстом.\n\n"
+                "• Если хочешь пообщаться с нейросетью — нажми кнопку **'Чат с AI'**.\n"
+                "• Если хочешь учиться — нажми **'Получить задание'**."
+            )

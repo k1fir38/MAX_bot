@@ -5,7 +5,7 @@ from maxapi.types import MessageCallback
 from maxapi.enums.parse_mode import ParseMode
 
 from app.bot import keyboards as kb
-from app.bot.logic import TEMP_DATA, get_user_role_and_data
+from app.bot.logic import USER_STATES, TEMP_DATA, get_user_role_and_data
 from app.dao.discipline import DisciplineDAO
 from app.dao.assignment import AssignmentDAO
 from app.dao.result import UserResultDAO
@@ -55,6 +55,7 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
     
     elif payload.startswith("st_task_select:"):
         task_id = int(payload.split(":")[1])
+        USER_STATES[user_id] = "solving_test"
         
         # Загружаем конкретное задание из базы
         task = await AssignmentDAO.find_one_or_none(id=task_id)

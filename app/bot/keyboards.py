@@ -44,6 +44,16 @@ def kb_teacher_assignments(assignments):
         )])
     return ButtonsPayload(buttons=buttons).pack()
 
+def kb_student_assignments_list(tasks):
+    """Клавиатура со списком доступных тестов для студента"""
+    buttons = []
+    for task in tasks:
+        # Текст: Название задания. Payload: st_task_select:ID
+        buttons.append([CallbackButton(text=f"📝 {task.title}", payload=f"st_task_select:{task.id}")])
+    
+    buttons.append([CallbackButton(text="⬅️ Назад к предметам", payload="menu:get_task")])
+    return ButtonsPayload(buttons=buttons).pack()
+
 def kb_confirm_delete_task(task_id):
     """Подтверждение удаления конкретного задания"""
     buttons = [
@@ -63,19 +73,19 @@ def kb_choose_discipline(disciplines):
     buttons.append([CallbackButton(text="➕ Создать новую дисциплину", payload="disc_create_new")])
     return ButtonsPayload(buttons=buttons).pack()
 
+def kb_student_choose_discipline(disciplines):
+    """Меню дисциплин студента"""
+    buttons = []
+    for disc in disciplines:
+        buttons.append([CallbackButton(text=disc.name, payload=f"st_disc_select:{disc.id}")])
+    return ButtonsPayload(buttons=buttons).pack()
+
 def kb_test_options(options):
     """Меню выбора ответа"""
     buttons = []
     for opt in options:
         # Ограничим длину текста на кнопке, если нужно
         buttons.append([CallbackButton(text=str(opt), payload=f"answer:{opt}")])
-    return ButtonsPayload(buttons=buttons).pack()
-
-def kb_student_choose_discipline(disciplines):
-    """Меню дисциплин студента"""
-    buttons = []
-    for disc in disciplines:
-        buttons.append([CallbackButton(text=disc.name, payload=f"st_disc_select:{disc.id}")])
     return ButtonsPayload(buttons=buttons).pack()
 
 def kb_get_ai_role():
@@ -111,14 +121,4 @@ def kb_manage_single_assignment(task_id, title, group):
             CallbackButton(text="⬅️ Назад к списку", payload="menu:manage_assignments")
         ]
     ]
-    return ButtonsPayload(buttons=buttons).pack()
-
-def kb_student_assignments_list(tasks):
-    """Клавиатура со списком доступных тестов для студента"""
-    buttons = []
-    for task in tasks:
-        # Текст: Название задания. Payload: st_task_select:ID
-        buttons.append([CallbackButton(text=f"📝 {task.title}", payload=f"st_task_select:{task.id}")])
-    
-    buttons.append([CallbackButton(text="⬅️ Назад к предметам", payload="menu:get_task")])
     return ButtonsPayload(buttons=buttons).pack()

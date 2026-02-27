@@ -30,10 +30,9 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         await handle_manage_assignments(event.message, user_id)
         return
 
-    # 1. Нажали на задание из списка
     elif payload.startswith("task_manage:"):
         task_id = int(payload.split(":")[1])
-        task = await AssignmentDAO.find_one_or_none(id=task_id, author_id=user.id) # Проверяем, что это его задание
+        task = await AssignmentDAO.find_one_or_none(id=task_id, author_id=user.id)
         
         if task:
             await event.message.answer(
@@ -45,10 +44,8 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         else:
              await event.message.answer("Задание не найдено или не принадлежит вам.")
 
-    # 2. Запрос на удаление (Ведет к окну подтверждения)
     elif payload.startswith("task_del:"):
         task_id = int(payload.split(":")[1])
-        # Временно сохраняем ID для подтверждения
         TEMP_DATA[user_id] = {"task_to_delete": task_id} 
         task = await AssignmentDAO.find_one_or_none(id=task_id, author_id=user.id)
         
@@ -56,18 +53,14 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
             await event.message.answer(
                 f"🔥 **Внимание!** Вы собираетесь удалить задание '{task.title}' (для группы:{task.target_group}). Это действие необратимо!",
                 attachments=[kb.kb_confirm_delete_task(task_id)]
-            )
+)
         else:
             await event.message.answer("Задание не найдено.")
         
-    # 3. Исполнение удаления (Теперь нужно использовать логику из execute_reset)
     elif payload.startswith("task_del_yes:"):
         task_id = int(payload.split(":")[1])
         task = await AssignmentDAO.find_one_or_none(id=task_id)
-        
-        # Получаем ID учителя (пользователя) из TEMP_DATA или текущего event, если нужно
-        # Для простоты используем user.id, который мы должны получить в начале callback_handler
-        
+
         try:
             await UserResultDAO.delete(assignment_id=task_id)
             await AssignmentDAO.delete(id=task_id)
@@ -77,12 +70,9 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         except Exception as e:
             await event.message.answer(f"❌ Ошибка при удалении: {e}")
 
-
     elif payload.startswith("task_view:"):
         task_id = int(payload.split(":")[1])
-        # Находим задание в базе
         task = await AssignmentDAO.find_one_or_none(id=task_id, author_id=user.id)
-        
         if task and task.questions:
             try:
                 # 1. Распаковываем строку JSON в список Python
@@ -92,7 +82,7 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
                 msg_lines = [
                     f"📖 **Просмотр задания:** {task.title}",
                     f"👥 **Группа:** {task.target_group}",
-                    "" # Пустая строка
+                    ""
                 ]
 
                 # 3. Проходим циклом по вопросам
@@ -102,22 +92,20 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
                     for opt in item['options']:
                         # Если этот вариант совпадает с правильным ответом
                         if str(opt).strip() == str(item['answer']).strip():
-                            # Выводим большими буквами и с галочкой
+                            # Выводим  с галочкой
                             msg_lines.append(f"   ✅ {opt}")
                         else:
                             # Обычный вариант
                             msg_lines.append(f"   ▫️ {opt}")
                     
-                    msg_lines.append("") # Разделитель между вопросами
+                    msg_lines.append("")
 
                 # 4. Объединяем всё в одно сообщение
                 full_message = "\n".join(msg_lines)
-                
                 await event.message.answer(
                     full_message, 
                     parse_mode=ParseMode.MARKDOWN
                 )
-
             except Exception as e:
                 await event.message.answer(f"❌ Не удалось прочитать структуру JSON: {e}")
         else:
@@ -162,16 +150,9 @@ async def handle_text(event: MessageCreated, state: str):
     text = event.message.body.text
 
     if state == "waiting_discipline_name":
-        # 1. Сохраняем новую дисциплину в базу
         await DisciplineDAO.add(name=text)
-        
-        # 2. Очищаем состояние ожидания текста
         del USER_STATES[user_id]
-        
-        # 3. Получаем ОБНОВЛЕННЫЙ список всех дисциплин
         disciplines = await DisciplineDAO.find_all()
-        
-        # 4. Сразу выводим сообщение со списком кнопок
         await event.message.answer(
             f"✅ Дисциплина '{text}' успешно создана!\n"
             f"Теперь выберите её в списке ниже, чтобы продолжить создание задания:",
@@ -196,7 +177,6 @@ async def handle_text(event: MessageCreated, state: str):
         try:
             questions_data = json.loads(text)
             if not isinstance(questions_data, list): raise ValueError("JSON должен быть списком [...]")
-            # (Тут твоя проверка полей...)
         except Exception as e:
             await event.message.answer(f"❌ Ошибка JSON: {e}")
             return

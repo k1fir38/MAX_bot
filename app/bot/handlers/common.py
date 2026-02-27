@@ -67,12 +67,7 @@ async def handle_ai_chat(event: MessageCreated):
     user_text = event.message.body.text
     
     # 1. Получаем текущую роль AI, которую использует ai_service
-    # Нам нужно получить доступ к ai_service.current_ai_roles 
-    # ВНИМАНИЕ: ai_service импортирован в main.py, но не в common.py. 
-    # Давай импортируем его здесь, если его нет.
-    
-    # Проверяем, какая роль установлена в сервисе для этого пользователя
-    current_ai_role_key = ai_service.current_ai_roles.get(user_id, ai_service.user_roles.get(user_id, 'default'))
+    current_ai_role_key = ai_service.user_roles.get(user_id, ai_service.user_roles.get(user_id, 'default'))
     
     role_names = {
         "coder": "Senior Developer 💻",

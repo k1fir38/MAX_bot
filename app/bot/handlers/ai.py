@@ -3,10 +3,14 @@ from maxapi.types import MessageCreated, MessageCallback
 from maxapi.enums.parse_mode import ParseMode
 
 from app.bot import keyboards as kb
+from app.bot.logic import USER_STATES
 from app.services.gigachat import ai_service
 
 async def handle_ai_menu(event: MessageCallback):
     """Показывает меню выбора ролей AI"""
+
+    user_id = event.callback.user.user_id
+    USER_STATES[user_id] = "ai_chat_active"
     await event.message.answer(
         "🤖 **Режим AI-ассистента**\nВыберите роль, в которой я должен отвечать:",
         attachments=[kb.kb_get_ai_role()], 

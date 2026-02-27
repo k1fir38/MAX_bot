@@ -43,3 +43,4 @@ class AssignmentDAO(BaseDAO):
             
             result = await session.execute(query)
             return result.scalars().all()
+        

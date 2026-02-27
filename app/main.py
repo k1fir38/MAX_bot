@@ -7,7 +7,7 @@ from maxapi import Bot, Dispatcher
 from app.config import settings
 from app.bot.handlers import register_handlers
 
-# --- НАСТРОЙКА SSL (Костыль для MaxAPI/Aiohttp) ---
+# НАСТРОЙКА SSL
 
 original_init = aiohttp.TCPConnector.__init__
 def insecure_init(self, *args, **kwargs):

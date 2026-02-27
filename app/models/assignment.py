@@ -21,5 +21,5 @@ class Assignment(Base):
     discipline = relationship("Discipline", back_populates="assignments")
     results = relationship("UserResult", back_populates="assignment")
     
-    # <--- ДОБАВЛЕНО (Связь с Teacher)
+    # <--- (Связь с Teacher)
     author = relationship("Teacher", back_populates="created_assignments") 

@@ -92,10 +92,10 @@ def register_handlers(dp: Dispatcher, bot: Bot):
 
         # Обработка регистрации и создания заданий
         if state:
-            if state.startswith("waiting_student") or state == "waiting_teacher_name":
+            if state.startswith("waiting_student") or state.startswith("waiting_teacher"):
                 await auth.handle_text(event, state)
                 return
-            elif state.startswith("waiting_task") or state == "waiting_discipline_name":
+            elif state.startswith("waiting_task") or state.startswith("waiting_discipline"):
                 await teacher.handle_text(event, state)
                 return
 

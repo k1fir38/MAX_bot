@@ -50,11 +50,7 @@ async def process_ai_chat(event: MessageCreated):
     await event.message.answer("⏳ Думаю...") 
 
     # Запускаем генерацию в отдельном потоке, чтобы не блокировать бота
-    response_text = await asyncio.to_thread(
-        ai_service.generate_response, 
-        user_id, 
-        user_text
-    )
+    response_text = await ai_service.generate_response(user_id, user_text)
     
     await event.message.answer(
         text=response_text, 

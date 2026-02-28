@@ -57,7 +57,7 @@ class GigaChatService:
         # Хранилище выбранных ролей
         self.user_roles = {}
 
-    def generate_response(self, user_id: int, user_text: str) -> str:
+    async def generate_response(self, user_id: int, user_text: str) -> str:
         try:
             # 1. Если истории нет, создаем её и добавляем системный промпт
             if user_id not in self.histories:
@@ -72,7 +72,7 @@ class GigaChatService:
             payload = Chat(
                 messages=self.histories[user_id],
                 temperature=0.7,
-                max_tokens=1000, # Ограничение длины ответа
+                max_tokens=10000, # Ограничение длины ответа
             )
             
             response = self.giga.chat(payload)
@@ -122,7 +122,7 @@ class GigaChatService:
         full_instruction = role_text + BASE_FORMATTING
         return Messages(role=MessagesRole.SYSTEM, content=full_instruction)
     
-    def analyze_test_results(self, test_data: list) -> str:
+    async def analyze_test_results(self, test_data: list) -> str:
         """
         Анализирует результаты теста.
         test_data ожидает формат: 

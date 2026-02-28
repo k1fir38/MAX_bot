@@ -11,6 +11,7 @@ from app.dao.assignment import AssignmentDAO
 from app.dao.result import UserResultDAO
 from app.services.gigachat import ai_service
 
+import time
 async def handle_callback(event: MessageCallback, payload: str, bot):
     user_id = event.callback.user.user_id
     chat_id = event.message.recipient.chat_id
@@ -64,7 +65,7 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
             await event.message.answer("❌ Ошибка: Задание не найдено.")
             return
 
-        # --- ЗАПУСК ТЕСТА (Твой старый код инициализации) ---
+        # ЗАПУСК ТЕСТА
         questions = json.loads(task.questions)
         TEMP_DATA[user_id] = {
             "task_id": task.id, 
@@ -86,18 +87,10 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         data = TEMP_DATA.get(user_id)
         if not data: return
 
-        # 1. САМЫЙ ПРЯМОЙ СПОСОБ УДАЛЕНИЯ ИЗ MAXAPI
-        try:
-            # В maxapi у объекта сообщения в колбэке есть метод delete()
-            await event.message.delete() 
-        except Exception as e:
-            # Если не сработало, пробуем через bot по .id
-            try:
-                await bot.delete_message(chat_id=chat_id, message_id=event.message.id)
-            except:
-                print(f"DEBUG: Все способы удаления не сработали: {e}")
+        # Удаление вопроса при ответе
+        await event.message.delete() 
 
-        # 2. ЛОГИКА ТЕСТА
+        # Логика теста
         user_answer = payload.replace("answer:", "")
         q_data = data["questions"][data["current_idx"]]
         
@@ -105,7 +98,7 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
         if is_correct: 
             data["correct_count"] += 1
             
-        # 3. ЗАПИСЬ ИСТОРИИ (КЛЮЧИ СТРОГО ПОД GIGACHAT.PY)
+        # Запись истории
         data["history"].append({
             "question": q_data["q"],
             "student_answer": user_answer,
@@ -123,26 +116,16 @@ async def handle_callback(event: MessageCallback, payload: str, bot):
                 attachments=[kb.kb_test_options(nxt['options'])]
             )
         else:
-            # --- ФИНАЛ ---
             total = len(data["questions"])
             score = data["correct_count"]
             percent = round((score/total)*100) if total > 0 else 0
             
-            wait_msg = await event.message.answer("🏁 Тест завершен! Нейросеть готовит рецензию... ⏳")
+            wait_msg = await event.message.answer("🏁 Тест завершен! Нейросеть проверяет ваши ответы и готовит рецензию... ⏳")
             
-            # Вызываем твой analyze_test_results (он ждет student_answer и question)
-            ai_feedback = await asyncio.to_thread(
-                ai_service.analyze_test_results, 
-                data["history"]
-            )
-            
-            # Удаляем "готовит рецензию..."
-            try:
-                await wait_msg.delete()
-            except:
-                pass
+            # Вызываем ИИ
+            ai_feedback = await ai_service.analyze_test_results(data["history"])
+            await wait_msg.message.delete()
 
-            # Сохранение в БД
             await UserResultDAO.add(
                 student_id=user.id, 
                 student_max_id=user_id,
